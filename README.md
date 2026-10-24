@@ -22,6 +22,11 @@
 - 设置：彩色/黑白图标、桌面格子数、抽屉是否隐藏系统应用、格言编辑
 - 完全离线，无广告、无追踪、无 GMS 依赖
 
+## 下载
+
+- 最新 APK：<https://github.com/xzl01/inkhome/releases/latest>
+- v0.1.0：<https://github.com/xzl01/inkhome/releases/tag/v0.1.0>
+
 ## 环境
 
 - Android 8.0+（API 26），targetSdk 34
