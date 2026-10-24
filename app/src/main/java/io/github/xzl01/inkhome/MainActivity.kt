@@ -4,7 +4,9 @@ import android.app.ActivityManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -94,6 +96,7 @@ private fun InkHomeRoot(prefs: Prefs, repo: AppRepository, homeSignal: Int) {
     var hideSystem by remember { mutableStateOf(prefs.hideSystemApps()) }
     var slotCount by remember { mutableStateOf(prefs.slotCount()) }
     var iconSizeDp by remember { mutableStateOf(prefs.iconSizeDp()) }
+    var caffeine by remember { mutableStateOf(prefs.caffeine()) }
     var motto by remember { mutableStateOf(prefs.motto()) }
     var pickIndex by remember { mutableIntStateOf(-1) }
     var pickFolderId by remember { mutableStateOf<String?>(null) }
@@ -250,6 +253,36 @@ private fun InkHomeRoot(prefs: Prefs, repo: AppRepository, homeSignal: Int) {
         }
     }
 
+    fun setCaffeine(enable: Boolean) {
+        if (enable && !Settings.canDrawOverlays(context)) {
+            Toast.makeText(context, "请允许「显示在其他应用上层」后再开启", Toast.LENGTH_SHORT).show()
+            runCatching {
+                context.startActivity(
+                    Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:${context.packageName}")
+                    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+            }
+            return
+        }
+        prefs.setCaffeine(enable)
+        caffeine = enable
+        if (enable) {
+            context.startForegroundService(Intent(context, CaffeineService::class.java))
+            Toast.makeText(context, "咖啡因已开启：屏幕保持常亮", Toast.LENGTH_SHORT).show()
+        } else {
+            context.stopService(Intent(context, CaffeineService::class.java))
+            Toast.makeText(context, "咖啡因已关闭", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (prefs.caffeine() && Settings.canDrawOverlays(context)) {
+            context.startForegroundService(Intent(context, CaffeineService::class.java))
+        }
+    }
+
     fun cleanBackground() {
         val am = context.getSystemService(ActivityManager::class.java)
         var killed = 0
@@ -377,6 +410,7 @@ private fun InkHomeRoot(prefs: Prefs, repo: AppRepository, homeSignal: Int) {
                 hideSystemApps = hideSystem,
                 slotCount = slotCount,
                 iconSizeDp = iconSizeDp,
+                caffeine = caffeine,
                 motto = motto,
                 onToggleColorIcons = { value ->
                     colorIcons = value
@@ -394,6 +428,7 @@ private fun InkHomeRoot(prefs: Prefs, repo: AppRepository, homeSignal: Int) {
                     iconSizeDp = value
                     prefs.setIconSizeDp(value)
                 },
+                onSetCaffeine = { enable -> setCaffeine(enable) },
                 onMottoSave = { value ->
                     prefs.setMotto(value)
                     motto = prefs.motto()
@@ -444,10 +479,12 @@ private fun InkHomeRoot(prefs: Prefs, repo: AppRepository, homeSignal: Int) {
 
     if (showTools) {
         ToolsDialog(
+            caffeine = caffeine,
             onDismiss = { showTools = false },
             onCleanBackground = { cleanBackground() },
             onLockScreen = { lockScreen() },
             onFlashRefresh = { flashCounter++ },
+            onToggleCaffeine = { setCaffeine(!caffeine) },
             onSettings = { screen = "settings" }
         )
     }

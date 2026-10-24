@@ -133,6 +133,12 @@ class Prefs(context: Context) {
         true
     }.getOrDefault(false)
 
+    fun caffeine(): Boolean = sp.getBoolean("caffeine", false)
+
+    fun setCaffeine(value: Boolean) {
+        sp.edit().putBoolean("caffeine", value).apply()
+    }
+
     fun seeded(): Boolean = sp.getBoolean("seeded", false)
 
     fun setSeeded(value: Boolean) {

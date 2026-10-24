@@ -14,10 +14,12 @@ import io.github.xzl01.inkhome.ui.theme.InkBlack
 
 @Composable
 fun ToolsDialog(
+    caffeine: Boolean,
     onDismiss: () -> Unit,
     onCleanBackground: () -> Unit,
     onLockScreen: () -> Unit,
     onFlashRefresh: () -> Unit,
+    onToggleCaffeine: () -> Unit,
     onSettings: () -> Unit
 ) {
     AlertDialog(
@@ -25,6 +27,9 @@ fun ToolsDialog(
         title = { Text("工具", color = InkBlack, fontSize = 20.sp, fontWeight = FontWeight.Bold) },
         text = {
             Column {
+                ToolItem(if (caffeine) "咖啡因：开（点按关闭）" else "咖啡因：关（点按开启）") {
+                    onDismiss(); onToggleCaffeine()
+                }
                 ToolItem("清理后台") { onDismiss(); onCleanBackground() }
                 ToolItem("锁屏") { onDismiss(); onLockScreen() }
                 ToolItem("刷屏清残影") { onDismiss(); onFlashRefresh() }

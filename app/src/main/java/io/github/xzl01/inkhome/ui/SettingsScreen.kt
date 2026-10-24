@@ -42,11 +42,13 @@ fun SettingsScreen(
     hideSystemApps: Boolean,
     slotCount: Int,
     iconSizeDp: Int,
+    caffeine: Boolean,
     motto: String,
     onToggleColorIcons: (Boolean) -> Unit,
     onToggleHideSystem: (Boolean) -> Unit,
     onSlotCount: (Int) -> Unit,
     onIconSize: (Int) -> Unit,
+    onSetCaffeine: (Boolean) -> Unit,
     onMottoSave: (String) -> Unit,
     onBackup: () -> Unit,
     onRestore: () -> Unit,
@@ -131,6 +133,18 @@ fun SettingsScreen(
             Spacer(Modifier.height(8.dp))
             Choice("保存格言", false) { onMottoSave(mottoText) }
         }
+
+        SettingRow("咖啡因（保持亮屏）") {
+            Choice("开", caffeine) { onSetCaffeine(true) }
+            Spacer(Modifier.width(10.dp))
+            Choice("关", !caffeine) { onSetCaffeine(false) }
+        }
+        Text(
+            text = "开启后任意页面都不会自动锁屏/息屏；需允许「显示在其他应用上层」，通知栏也会有常驻通知。",
+            color = InkGray,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
 
         SettingRow("桌面配置") {
             Choice("备份到文件", false) { onBackup() }
