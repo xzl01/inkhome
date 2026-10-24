@@ -48,6 +48,8 @@ fun SettingsScreen(
     onSlotCount: (Int) -> Unit,
     onIconSize: (Int) -> Unit,
     onMottoSave: (String) -> Unit,
+    onBackup: () -> Unit,
+    onRestore: () -> Unit,
     onBack: () -> Unit
 ) {
     var mottoText by remember { mutableStateOf(motto) }
@@ -130,9 +132,21 @@ fun SettingsScreen(
             Choice("保存格言", false) { onMottoSave(mottoText) }
         }
 
+        SettingRow("桌面配置") {
+            Choice("备份到文件", false) { onBackup() }
+            Spacer(Modifier.width(10.dp))
+            Choice("从文件恢复", false) { onRestore() }
+        }
+        Text(
+            text = "备份包含桌面格子、文件夹、格言和设置；自定义图标文件需另行备份。",
+            color = InkGray,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+
         Spacer(Modifier.height(24.dp))
         Text(
-            text = "墨桌 v0.1.0 · GPL-3.0 · 为彩色墨水屏重写",
+            text = "墨桌 v0.4.0 · GPL-3.0 · 为彩色墨水屏重写",
             color = InkGray,
             fontSize = 12.sp,
             modifier = Modifier.padding(horizontal = 16.dp)

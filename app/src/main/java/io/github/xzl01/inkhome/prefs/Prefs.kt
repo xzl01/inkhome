@@ -80,6 +80,59 @@ class Prefs(context: Context) {
         }.apply()
     }
 
+    fun exportJson(): String {
+        val root = JSONObject()
+        val slotsArray = JSONArray()
+        repeat(MAX_SLOTS) { slotsArray.put(slot(it) ?: "") }
+        root.put("slots", slotsArray)
+        root.put("slot_count", slotCount())
+        root.put("color_icons", colorIcons())
+        root.put("hide_system", hideSystemApps())
+        root.put("icon_size", iconSizeDp())
+        root.put("motto", motto())
+        val foldersArray = JSONArray()
+        folders().values.forEach { folder ->
+            val obj = JSONObject()
+            obj.put("id", folder.id)
+            obj.put("name", folder.name)
+            obj.put("apps", JSONArray(folder.apps))
+            foldersArray.put(obj)
+        }
+        root.put("folders", foldersArray)
+        return root.toString()
+    }
+
+    /** 恢复备份；成功返回 true。自定义图标文件不包含在备份里。 */
+    fun importJson(raw: String): Boolean = runCatching {
+        val root = JSONObject(raw)
+        val slotsArray = root.optJSONArray("slots")
+        for (i in 0 until MAX_SLOTS) {
+            val value = slotsArray?.optString(i, "")?.takeIf { it.isNotBlank() }
+            setSlot(i, value)
+        }
+        root.optInt("slot_count", 8).let { setSlotCount(it) }
+        root.optBoolean("color_icons", true).let { setColorIcons(it) }
+        root.optBoolean("hide_system", true).let { setHideSystemApps(it) }
+        root.optInt("icon_size", 54).let { setIconSizeDp(it) }
+        root.optString("motto", "").let { if (it.isNotBlank()) setMotto(it) }
+        val foldersArray = root.optJSONArray("folders") ?: JSONArray()
+        val restored = LinkedHashMap<String, FolderData>()
+        for (i in 0 until foldersArray.length()) {
+            val obj = foldersArray.getJSONObject(i)
+            val appsArray = obj.optJSONArray("apps") ?: JSONArray()
+            val apps = (0 until appsArray.length()).map { appsArray.getString(it) }
+            val folder = FolderData(
+                id = obj.getString("id"),
+                name = obj.optString("name", "文件夹"),
+                apps = apps
+            )
+            restored[folder.id] = folder
+        }
+        saveFolders(restored)
+        sp.edit().putBoolean("seeded", true).apply()
+        true
+    }.getOrDefault(false)
+
     fun seeded(): Boolean = sp.getBoolean("seeded", false)
 
     fun setSeeded(value: Boolean) {

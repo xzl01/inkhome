@@ -143,6 +143,47 @@ private fun InkHomeRoot(prefs: Prefs, repo: AppRepository, homeSignal: Int) {
         }
     }
 
+    fun reloadFromPrefs() {
+        colorIcons = prefs.colorIcons()
+        hideSystem = prefs.hideSystemApps()
+        slotCount = prefs.slotCount()
+        iconSizeDp = prefs.iconSizeDp()
+        motto = prefs.motto()
+        folders = prefs.folders()
+        for (i in slots.indices) slots[i] = prefs.slot(i)
+        refreshApps()
+    }
+
+    val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.openOutputStream(uri)?.use { output ->
+                    output.write(prefs.exportJson().toByteArray())
+                }
+                Toast.makeText(context, "桌面配置已备份", Toast.LENGTH_SHORT).show()
+            }.onFailure {
+                Toast.makeText(context, "备份失败：$it", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching {
+                val text = context.contentResolver.openInputStream(uri)
+                    ?.bufferedReader()?.use { it.readText() }.orEmpty()
+                if (text.isNotBlank() && prefs.importJson(text)) {
+                    reloadFromPrefs()
+                    Toast.makeText(context, "已恢复桌面配置", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, "配置文件无效", Toast.LENGTH_SHORT).show()
+                }
+            }.onFailure {
+                Toast.makeText(context, "恢复失败：$it", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     fun saveFolders(newFolders: Map<String, FolderData>) {
         folders = newFolders
         prefs.saveFolders(newFolders)
@@ -357,6 +398,8 @@ private fun InkHomeRoot(prefs: Prefs, repo: AppRepository, homeSignal: Int) {
                     prefs.setMotto(value)
                     motto = prefs.motto()
                 },
+                onBackup = { backupLauncher.launch("inkhome-backup.json") },
+                onRestore = { restoreLauncher.launch(arrayOf("application/json", "text/*")) },
                 onBack = { screen = "home" }
             )
 
