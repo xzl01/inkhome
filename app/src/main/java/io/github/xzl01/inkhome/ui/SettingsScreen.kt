@@ -41,10 +41,12 @@ fun SettingsScreen(
     colorIcons: Boolean,
     hideSystemApps: Boolean,
     slotCount: Int,
+    iconSizeDp: Int,
     motto: String,
     onToggleColorIcons: (Boolean) -> Unit,
     onToggleHideSystem: (Boolean) -> Unit,
     onSlotCount: (Int) -> Unit,
+    onIconSize: (Int) -> Unit,
     onMottoSave: (String) -> Unit,
     onBack: () -> Unit
 ) {
@@ -89,6 +91,18 @@ fun SettingsScreen(
             Prefs.SLOT_OPTIONS.forEach { option ->
                 Spacer(Modifier.width(8.dp))
                 Choice("$option", slotCount == option) { onSlotCount(option) }
+            }
+        }
+
+        SettingRow("图标大小") {
+            Prefs.ICON_SIZE_OPTIONS.forEach { option ->
+                Spacer(Modifier.width(8.dp))
+                val label = when (option) {
+                    46 -> "小"
+                    54 -> "中"
+                    else -> "大"
+                }
+                Choice(label, iconSizeDp == option) { onIconSize(option) }
             }
         }
 

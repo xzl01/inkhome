@@ -21,12 +21,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -37,7 +33,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -45,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.xzl01.inkhome.data.AppEntry
+import io.github.xzl01.inkhome.data.FolderData
 import io.github.xzl01.inkhome.data.AppRepository
 import io.github.xzl01.inkhome.ui.theme.DISPLAY
 import io.github.xzl01.inkhome.ui.theme.InkAccent
@@ -67,12 +63,17 @@ fun HomeScreen(
     slots: List<String?>,
     slotCount: Int,
     colorIcons: Boolean,
+    iconSizeDp: Int,
+    folders: Map<String, FolderData>,
     motto: String,
     repo: AppRepository,
     onAddSlot: (Int) -> Unit,
+    onOpenFolder: (String) -> Unit,
+    onLongPressFolder: (String) -> Unit,
     onLongPressSlot: (Int, AppEntry) -> Unit,
     onLaunch: (AppEntry) -> Unit,
     onOpenDrawer: () -> Unit,
+    onOpenTools: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
     val context = LocalContext.current
@@ -90,7 +91,7 @@ fun HomeScreen(
             override fun onReceive(ctx: Context, intent: Intent) {
                 val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
                 val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1)
-                battery = (level * 100 / scale)
+                battery = level * 100 / scale
                 val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
                 charging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
                     status == BatteryManager.BATTERY_STATUS_FULL
@@ -133,7 +134,7 @@ fun HomeScreen(
                         color = InkGray,
                         fontSize = 15.sp
                     )
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.padding(horizontal = 5.dp))
                     Text(
                         text = now.format(DateTimeFormatter.ofPattern("EEEE", Locale.CHINA)),
                         color = InkGray,
@@ -160,7 +161,7 @@ fun HomeScreen(
             }
         }
 
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.weight(1f))
         Text(
             text = motto,
             color = InkBlack,
@@ -172,57 +173,84 @@ fun HomeScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp)
         )
-        Spacer(Modifier.height(28.dp))
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(22.dp))
 
         val rows = (slotCount / 4).coerceAtLeast(1)
+        val cellHeight = (iconSizeDp + 64).dp
         for (row in 0 until rows) {
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .height(118.dp),
+                    .height(cellHeight),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 for (col in 0 until 4) {
                     val index = row * 4 + col
                     val key = slots.getOrNull(index)
+                    val folder = FolderData.idFromSlot(key)?.let { folders[it] }
                     val app = key?.let { appsByKey[it] }
-                    val cellModifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
                     Column(
-                        modifier = cellModifier
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
                             .border(1.dp, InkLine)
                             .combinedClickable(
                                 onClick = {
-                                    if (app != null) onLaunch(app) else onAddSlot(index)
+                                    when {
+                                        folder != null -> onOpenFolder(folder.id)
+                                        app != null -> onLaunch(app)
+                                        else -> onAddSlot(index)
+                                    }
                                 },
                                 onLongClick = {
-                                    if (app != null) onLongPressSlot(index, app)
+                                    when {
+                                        folder != null -> onLongPressFolder(folder.id)
+                                        app != null -> onLongPressSlot(index, app)
+                                        else -> onAddSlot(index)
+                                    }
                                 }
                             )
-                            .padding(vertical = 14.dp, horizontal = 6.dp),
+                            .padding(vertical = 10.dp, horizontal = 6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        if (app != null) {
-                            AppIcon(entry = app, repo = repo, size = 54.dp, color = colorIcons)
-                            Spacer(Modifier.height(10.dp))
-                            Text(
-                                text = app.label,
-                                color = InkBlack,
-                                fontSize = 13.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        } else {
-                            Text(
-                                text = "+",
-                                color = InkGray,
-                                fontSize = 40.sp,
-                                fontWeight = FontWeight.Light,
-                                modifier = Modifier.height(80.dp)
-                            )
-                            Text(text = "添加应用", color = InkGray, fontSize = 12.sp)
+                        when {
+                            folder != null -> {
+                                FolderGlyph(
+                                    folder = folder,
+                                    appsByKey = appsByKey,
+                                    repo = repo,
+                                    colorIcons = colorIcons,
+                                    iconSizeDp = iconSizeDp
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    text = folder.name,
+                                    color = InkBlack,
+                                    fontSize = 13.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            app != null -> {
+                                AppIcon(entry = app, repo = repo, size = iconSizeDp.dp, color = colorIcons)
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    text = app.label,
+                                    color = InkBlack,
+                                    fontSize = 13.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            else -> {
+                                Text(
+                                    text = "+",
+                                    color = InkGray,
+                                    fontSize = 40.sp,
+                                    fontWeight = FontWeight.Light
+                                )
+                                Text(text = "添加应用", color = InkGray, fontSize = 12.sp)
+                            }
                         }
                     }
                 }
@@ -231,10 +259,11 @@ fun HomeScreen(
 
         Spacer(Modifier.weight(1f))
         Row(
-            Modifier.fillMaxWidth().padding(bottom = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            Modifier.fillMaxWidth().padding(bottom = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             NavButton("应用", Modifier.weight(1f), onOpenDrawer)
+            NavButton("工具", Modifier.weight(1f), onOpenTools)
             NavButton("设置", Modifier.weight(1f), onOpenSettings)
         }
     }
@@ -246,15 +275,42 @@ private fun NavButton(text: String, modifier: Modifier, onClick: () -> Unit) {
         modifier = modifier
             .border(1.5.dp, InkBlack, RoundedCornerShape(2.dp))
             .clickable(onClick = onClick)
-            .padding(vertical = 14.dp),
+            .padding(vertical = 13.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text = text, color = InkBlack, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text(text = text, color = InkBlack, fontSize = 15.sp, fontWeight = FontWeight.Bold)
     }
 }
 
-/** 桌面上没有条目时用于占位的透明块。 */
+
 @Composable
-fun EmptyCell(size: Int) {
-    Box(Modifier.size(size.dp))
+private fun FolderGlyph(
+    folder: FolderData,
+    appsByKey: Map<String, AppEntry>,
+    repo: AppRepository,
+    colorIcons: Boolean,
+    iconSizeDp: Int
+) {
+    val mini = (iconSizeDp * 0.44f).dp
+    val items = folder.apps.mapNotNull { appsByKey[it] }.take(4)
+    Column {
+        for (row in 0 until 2) {
+            Row {
+                for (col in 0 until 2) {
+                    val index = row * 2 + col
+                    val app = items.getOrNull(index)
+                    Box(
+                        modifier = Modifier.padding(1.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (app != null) {
+                            AppIcon(entry = app, repo = repo, size = mini, color = colorIcons)
+                        } else {
+                            Box(Modifier.height(mini).fillMaxWidth(0.5f))
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

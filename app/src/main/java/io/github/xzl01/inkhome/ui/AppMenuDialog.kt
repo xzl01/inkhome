@@ -27,7 +27,8 @@ fun AppMenuDialog(
     onAppInfo: () -> Unit,
     onUninstall: () -> Unit,
     onAddToHome: (() -> Unit)?,
-    onRemoveFromHome: (() -> Unit)?
+    onRemoveFromHome: (() -> Unit)?,
+    onCreateFolder: (() -> Unit)? = null
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -40,6 +41,9 @@ fun AppMenuDialog(
                 MenuItem("卸载") { onDismiss(); onUninstall() }
                 if (onAddToHome != null) {
                     MenuItem("添加到桌面") { onDismiss(); onAddToHome() }
+                }
+                if (onCreateFolder != null) {
+                    MenuItem("新建文件夹") { onDismiss(); onCreateFolder() }
                 }
                 if (showRemoveFromHome && onRemoveFromHome != null) {
                     MenuItem("从桌面移除") { onDismiss(); onRemoveFromHome() }
