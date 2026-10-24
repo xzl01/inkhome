@@ -70,7 +70,7 @@ fun HomeScreen(
     motto: String,
     repo: AppRepository,
     onAddSlot: (Int) -> Unit,
-    onRemoveSlot: (Int) -> Unit,
+    onLongPressSlot: (Int, AppEntry) -> Unit,
     onLaunch: (AppEntry) -> Unit,
     onOpenDrawer: () -> Unit,
     onOpenSettings: () -> Unit
@@ -110,8 +110,6 @@ fun HomeScreen(
             delay(5_000)
         }
     }
-
-    var removing by remember { mutableStateOf<Int?>(null) }
 
     Column(
         modifier = Modifier
@@ -200,7 +198,7 @@ fun HomeScreen(
                                     if (app != null) onLaunch(app) else onAddSlot(index)
                                 },
                                 onLongClick = {
-                                    if (app != null) removing = index
+                                    if (app != null) onLongPressSlot(index, app)
                                 }
                             )
                             .padding(vertical = 14.dp, horizontal = 6.dp),
@@ -239,23 +237,6 @@ fun HomeScreen(
             NavButton("应用", Modifier.weight(1f), onOpenDrawer)
             NavButton("设置", Modifier.weight(1f), onOpenSettings)
         }
-    }
-
-    removing?.let { index ->
-        AlertDialog(
-            onDismissRequest = { removing = null },
-            title = { Text("移除快捷方式") },
-            text = { Text("从桌面移除这个应用？（应用不会被卸载）") },
-            confirmButton = {
-                TextButton(onClick = {
-                    onRemoveSlot(index)
-                    removing = null
-                }) { Text("移除") }
-            },
-            dismissButton = {
-                TextButton(onClick = { removing = null }) { Text("取消") }
-            }
-        )
     }
 }
 
