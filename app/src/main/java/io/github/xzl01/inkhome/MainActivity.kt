@@ -8,7 +8,9 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,6 +51,8 @@ import io.github.xzl01.inkhome.ui.DrawerScreen
 import io.github.xzl01.inkhome.ui.FolderMenuDialog
 import io.github.xzl01.inkhome.ui.FolderScreen
 import io.github.xzl01.inkhome.ui.HomeScreen
+import io.github.xzl01.inkhome.ui.IconCache
+import io.github.xzl01.inkhome.ui.MoveToFolderDialog
 import io.github.xzl01.inkhome.ui.SettingsScreen
 import io.github.xzl01.inkhome.ui.ToolsDialog
 import io.github.xzl01.inkhome.ui.appInfoIntent
@@ -59,6 +63,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 class MainActivity : ComponentActivity() {
     private val homeSignal = mutableIntStateOf(0)
@@ -102,12 +107,35 @@ private fun InkHomeRoot(prefs: Prefs, repo: AppRepository, homeSignal: Int) {
     var folderMenuId by remember { mutableStateOf<String?>(null) }
     var renameFolderId by remember { mutableStateOf<String?>(null) }
     var renameText by remember { mutableStateOf("") }
+    var pendingIconApp by remember { mutableStateOf<AppEntry?>(null) }
+    var moveApp by remember { mutableStateOf<AppEntry?>(null) }
+    var moveFromIndex by remember { mutableStateOf<Int?>(null) }
     val slots = remember {
         mutableStateListOf<String?>().apply {
             repeat(Prefs.MAX_SLOTS) { add(prefs.slot(it)) }
         }
     }
     val scope = rememberCoroutineScope()
+
+    val iconPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val app = pendingIconApp
+        pendingIconApp = null
+        if (uri != null && app != null) {
+            runCatching {
+                val dir = File(context.filesDir, "icons").apply { mkdirs() }
+                val outFile = File(dir, app.key.replace('/', '_') + ".png")
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    outFile.outputStream().use { output -> input.copyTo(output) }
+                }
+                prefs.setCustomIcon(app.key, outFile.absolutePath)
+                IconCache.invalidate(app.key)
+                scope.launch { allApps = withContext(Dispatchers.IO) { repo.loadApps() } }
+                Toast.makeText(context, "已设置自定义图标", Toast.LENGTH_SHORT).show()
+            }.onFailure {
+                Toast.makeText(context, "设置图标失败：$it", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     fun refreshApps() {
         scope.launch {
@@ -469,6 +497,44 @@ private fun InkHomeRoot(prefs: Prefs, repo: AppRepository, homeSignal: Int) {
                     prefs.setSlot(slotIndex, FolderData.slotValue(id))
                     slots[slotIndex] = FolderData.slotValue(id)
                 }
+            },
+            onCustomIcon = {
+                pendingIconApp = app
+                iconPicker.launch(arrayOf("image/*"))
+            },
+            onResetIcon = if (app.customIconPath != null) {
+                {
+                    prefs.setCustomIcon(app.key, null)
+                    IconCache.invalidate(app.key)
+                    refreshApps()
+                }
+            } else null,
+            onMoveToFolder = if (fromHome != null && folders.isNotEmpty()) {
+                {
+                    moveApp = app
+                    moveFromIndex = fromHome
+                }
+            } else null
+        )
+    }
+
+    moveApp?.let { app ->
+        MoveToFolderDialog(
+            folders = folders,
+            onDismiss = { moveApp = null; moveFromIndex = null },
+            onPick = { folderId ->
+                val folder = folders[folderId]
+                if (folder != null) {
+                    saveFolders(
+                        folders + (folder.id to folder.copy(apps = (folder.apps + app.key).distinct()))
+                    )
+                }
+                moveFromIndex?.let { index ->
+                    prefs.setSlot(index, null)
+                    slots[index] = null
+                }
+                moveApp = null
+                moveFromIndex = null
             }
         )
     }

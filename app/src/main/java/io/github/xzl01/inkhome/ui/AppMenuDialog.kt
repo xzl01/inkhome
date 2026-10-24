@@ -28,7 +28,10 @@ fun AppMenuDialog(
     onUninstall: () -> Unit,
     onAddToHome: (() -> Unit)?,
     onRemoveFromHome: (() -> Unit)?,
-    onCreateFolder: (() -> Unit)? = null
+    onCreateFolder: (() -> Unit)? = null,
+    onCustomIcon: (() -> Unit)? = null,
+    onResetIcon: (() -> Unit)? = null,
+    onMoveToFolder: (() -> Unit)? = null
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -44,6 +47,15 @@ fun AppMenuDialog(
                 }
                 if (onCreateFolder != null) {
                     MenuItem("新建文件夹") { onDismiss(); onCreateFolder() }
+                }
+                if (onMoveToFolder != null) {
+                    MenuItem("移动到文件夹") { onDismiss(); onMoveToFolder() }
+                }
+                if (onCustomIcon != null) {
+                    MenuItem("自定义图标") { onDismiss(); onCustomIcon() }
+                }
+                if (onResetIcon != null) {
+                    MenuItem("恢复默认图标") { onDismiss(); onResetIcon() }
                 }
                 if (showRemoveFromHome && onRemoveFromHome != null) {
                     MenuItem("从桌面移除") { onDismiss(); onRemoveFromHome() }

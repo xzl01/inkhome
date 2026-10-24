@@ -71,6 +71,15 @@ class Prefs(context: Context) {
         sp.edit().putString("folders", array.toString()).apply()
     }
 
+    fun customIcon(appKey: String): String? =
+        sp.getString("icon_$appKey", null)?.takeIf { java.io.File(it).exists() }
+
+    fun setCustomIcon(appKey: String, path: String?) {
+        sp.edit().apply {
+            if (path.isNullOrBlank()) remove("icon_$appKey") else putString("icon_$appKey", path)
+        }.apply()
+    }
+
     fun seeded(): Boolean = sp.getBoolean("seeded", false)
 
     fun setSeeded(value: Boolean) {

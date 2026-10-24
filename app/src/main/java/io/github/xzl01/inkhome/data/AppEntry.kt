@@ -6,5 +6,6 @@ data class AppEntry(
     val label: String,
     val packageName: String,
     val activityName: String,
-    val isSystem: Boolean
+    val isSystem: Boolean,
+    val customIconPath: String? = null
 )

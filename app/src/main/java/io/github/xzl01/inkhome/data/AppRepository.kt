@@ -11,6 +11,7 @@ class AppRepository(private val context: Context) {
 
     fun loadApps(): List<AppEntry> {
         val pm = context.packageManager
+        val customPrefs = context.getSharedPreferences("inkhome", Context.MODE_PRIVATE)
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         return runCatching {
             pm.queryIntentActivities(intent, 0)
@@ -18,12 +19,16 @@ class AppRepository(private val context: Context) {
                 .mapNotNull { resolve ->
                     val ai = resolve.activityInfo ?: return@mapNotNull null
                     if (ai.packageName == context.packageName) return@mapNotNull null
+                    val key = "${ai.packageName}/${ai.name}"
                     AppEntry(
-                        key = "${ai.packageName}/${ai.name}",
+                        key = key,
                         label = ai.loadLabel(pm)?.toString()?.ifBlank { ai.packageName } ?: ai.packageName,
                         packageName = ai.packageName,
                         activityName = ai.name,
-                        isSystem = (ai.applicationInfo?.flags ?: 0) and ApplicationInfo.FLAG_SYSTEM != 0
+                        isSystem = (ai.applicationInfo?.flags ?: 0) and ApplicationInfo.FLAG_SYSTEM != 0,
+                        customIconPath = customPrefs.getString("icon_$key", null)?.takeIf {
+                            java.io.File(it).exists()
+                        }
                     )
                 }
                 .distinctBy { it.key }
