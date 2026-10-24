@@ -175,10 +175,16 @@ fun HomeScreen(
                 .padding(horizontal = 8.dp)
         )
         Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.weight(1f))
 
         val rows = (slotCount / 4).coerceAtLeast(1)
         for (row in 0 until rows) {
-            Row(Modifier.weight(1f), verticalAlignment = Alignment.Top) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(118.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 for (col in 0 until 4) {
                     val index = row * 4 + col
                     val key = slots.getOrNull(index)
@@ -225,9 +231,9 @@ fun HomeScreen(
             }
         }
 
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.weight(1f))
         Row(
-            Modifier.fillMaxWidth(),
+            Modifier.fillMaxWidth().padding(bottom = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             NavButton("应用", Modifier.weight(1f), onOpenDrawer)

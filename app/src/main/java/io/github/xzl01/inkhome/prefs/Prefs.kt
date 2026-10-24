@@ -33,6 +33,12 @@ class Prefs(context: Context) {
         sp.edit().putBoolean("hide_system", value).apply()
     }
 
+    fun seeded(): Boolean = sp.getBoolean("seeded", false)
+
+    fun setSeeded(value: Boolean) {
+        sp.edit().putBoolean("seeded", value).apply()
+    }
+
     fun motto(): String = sp.getString("motto", DEFAULT_MOTTO)?.ifBlank { DEFAULT_MOTTO } ?: DEFAULT_MOTTO
 
     fun setMotto(value: String) {

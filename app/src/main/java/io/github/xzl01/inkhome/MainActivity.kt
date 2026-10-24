@@ -63,6 +63,19 @@ private fun InkHomeRoot(prefs: Prefs, repo: AppRepository) {
 
     LaunchedEffect(Unit) { refreshApps() }
 
+    // 首次启动：用前 8 个非系统应用填充桌面，避免一上来全是空位
+    LaunchedEffect(allApps) {
+        if (allApps.isNotEmpty() && !prefs.seeded()) {
+            allApps.filter { !it.isSystem }.take(Prefs.MAX_SLOTS).forEachIndexed { index, app ->
+                if (slots[index] == null) {
+                    prefs.setSlot(index, app.key)
+                    slots[index] = app.key
+                }
+            }
+            prefs.setSeeded(true)
+        }
+    }
+
     val visibleApps = remember(allApps, hideSystem) {
         if (hideSystem) allApps.filter { !it.isSystem } else allApps
     }

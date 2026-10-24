@@ -17,6 +17,7 @@ class AppRepository(private val context: Context) {
                 .asSequence()
                 .mapNotNull { resolve ->
                     val ai = resolve.activityInfo ?: return@mapNotNull null
+                    if (ai.packageName == context.packageName) return@mapNotNull null
                     AppEntry(
                         key = "${ai.packageName}/${ai.name}",
                         label = ai.loadLabel(pm)?.toString()?.ifBlank { ai.packageName } ?: ai.packageName,
